@@ -14,6 +14,34 @@ datasource db {
 }
 
 model Device {
-  id   Int    @id @default(autoincrement())
-  name String @unique
+  id                 Int      @id @default(autoincrement())
+  name               String   @unique
+  available_storages String[]
+  reports            Report[]
+}
+
+model Report {
+  id       String @id @default(uuid())
+  device   Device @relation(fields: [deviceId], references: [id])
+  deviceId Int
+  slug     String @unique
+  storage  String // "128GB"
+
+  carbon_footprint_kg            Int? // 61
+  carbon_fraction_production     Float? // 0.1 - stands for 10%
+  carbon_fraction_transportation Float? // 0.1 - stands for 10%
+  carbon_fraction_use            Float? // 0.1 - stands for 10%
+  carbon_fraction_end            Float? // 0.1 - stands for 10%
+
+  recycled_renewable_contents      Float? // // 0.1 - stands for 10%
+  clean_energy                     Float? // // 0.1 - stands for 10%
+  recycled_rare_elements           Float? // // 0.1 - stands for 10%
+  recycled_content_fiber_packaging Float? // // 0.1 - stands for 10%
+
+  labout_protection       String?
+  measures_for_longevity  String?
+  harmful_resources_usage String?
+  ability_to_recycle      String?
+
+  source_links String[]
 }
