@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌍 Know Your Emission
 
-## Getting Started
+A sustainability-driven platform that helps users understand the environmental impact of their personal devices.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 📘 Overview
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Know Your Emission is an educational web project where users can select a device (smartphone, laptop, etc.) and instantly see:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- 📦 Manufacturing CO₂ emissions
+- 🔋 Recycled materials used
+- 🌫️ Lifecycle environmental impact
+- 🌱 Eco-friendly alternatives and sustainable measures
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+All numbers come from a life cycle assessment (LCA) reports, which are made to evaluate the environmental impacts of a product, service, or process across its entire life cycle. Also, we use the official companies’ reports, such as Product Environment Reports (PER) made by Apple.
 
-## Learn More
+This project supports UN SDGs:
 
-To learn more about Next.js, take a look at the following resources:
+- SDG 12 — Responsible Consumption & Production
+- SDG 9 — Industry, Innovation & Infrastructure
+- SDG 7 — Affordable and Clean Energy
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🧠 Tech Stack
 
-## Deploy on Vercel
+### Fullstack
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Next.js (App Router, Server Components, API Routes)
+- TypeScript
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### UI
+
+- shadcn/ui
+- Tailwind CSS
+
+### Backend & Data
+
+- Prisma ORM
+- PostgreSQL
+- Zod for validation
+
+### Deployment
+
+- Vercel (planned)
+
+---
+
+## ✨ MVP Features
+
+### ✔️ Device Selector
+
+Choose device → storage capacity
+
+### ✔️ Emissions Dashboard
+
+Shows:
+
+- total carbon footprint CO₂e from manufacturing
+- Its distribution among different stages of the device’s lifecycle
+- Recycled content in use
+- Sustainable measures, such as ensured longevity, recycling programs available
+
+### ✔️ Data Transparency
+
+Each metric links to its source (LCA, reports, datasets).
+
+---
