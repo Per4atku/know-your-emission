@@ -21,8 +21,7 @@ import {
 import { Device, useDevice } from "@/context/device-context";
 
 export default function SelectDevice({ devices }: { devices: Device[] }) {
-  const { selectedDevice, setSelectedDevice, setSelectedCapacity } =
-    useDevice();
+  const { selectedDevice, setSelectedDevice } = useDevice();
 
   const [open, setOpen] = React.useState(false);
 
@@ -52,7 +51,6 @@ export default function SelectDevice({ devices }: { devices: Device[] }) {
                     value={d.name}
                     onSelect={() => {
                       setSelectedDevice(d);
-                      setSelectedCapacity(null);
                       setOpen(false);
                     }}
                   >
