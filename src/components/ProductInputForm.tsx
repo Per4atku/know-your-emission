@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Device, useDevice } from "@/context/device-context";
+import { useDevice } from "@/context/device-context";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,43 +12,75 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import generatedSlug from "@/helper/slug";
+import { getModelsByBrand, getVariantsByModel } from "@/app/actions/device";
+import type { Brand, DeviceModel, DeviceVariant } from "@/generated/prisma/client";
 
 interface ProductInputFormProps {
-  devices: Device[];
-  brands: string[];
+  brands: Brand[];
 }
 
-export default function ProductInputForm({
-  devices,
-  brands,
-}: ProductInputFormProps) {
+export default function ProductInputForm({ brands }: ProductInputFormProps) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const {
     selectedBrand,
     setSelectedBrand,
-    selectedDevice,
-    setSelectedDevice,
-    selectedCapacity,
-    setSelectedCapacity,
+    selectedModel,
+    setSelectedModel,
+    selectedVariant,
+    setSelectedVariant,
     isComplete,
   } = useDevice();
 
-  // Filter devices by selected brand
-  const filteredDevices = selectedBrand
-    ? devices.filter((d) => d.brand === selectedBrand)
-    : [];
+  const [models, setModels] = useState<DeviceModel[]>([]);
+  const [variants, setVariants] = useState<DeviceVariant[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
+  const [loadingVariants, setLoadingVariants] = useState(false);
 
-  // Get available storage options for selected device
-  const storageOptions = selectedDevice?.available_storages ?? [];
+  // Fetch models when brand changes
+  useEffect(() => {
+    if (selectedBrand) {
+      setLoadingModels(true);
+      getModelsByBrand(selectedBrand.id)
+        .then(setModels)
+        .finally(() => setLoadingModels(false));
+    } else {
+      setModels([]);
+    }
+  }, [selectedBrand]);
+
+  // Fetch variants when model changes
+  useEffect(() => {
+    if (selectedModel) {
+      setLoadingVariants(true);
+      getVariantsByModel(selectedModel.id)
+        .then(setVariants)
+        .finally(() => setLoadingVariants(false));
+    } else {
+      setVariants([]);
+    }
+  }, [selectedModel]);
+
+  const handleBrandChange = (brandId: string) => {
+    const brand = brands.find((b) => b.id === brandId);
+    setSelectedBrand(brand ?? null);
+  };
+
+  const handleModelChange = (modelId: string) => {
+    const model = models.find((m) => m.id === modelId);
+    setSelectedModel(model ?? null);
+  };
+
+  const handleVariantChange = (variantId: string) => {
+    const variant = variants.find((v) => v.id === variantId);
+    setSelectedVariant(variant ?? null);
+  };
 
   const handleCalculate = () => {
-    if (selectedDevice && selectedCapacity) {
-      const slug = generatedSlug({
-        modelName: selectedDevice.name,
-        capacity: selectedCapacity,
+    if (selectedVariant) {
+      startTransition(() => {
+        router.push(`/${selectedVariant.slug}`);
       });
-      router.push(`/${slug}`);
     }
   };
 
@@ -58,7 +91,10 @@ export default function ProductInputForm({
         <Label htmlFor="brand" className="text-muted-foreground text-sm">
           Brand
         </Label>
-        <Select value={selectedBrand ?? ""} onValueChange={setSelectedBrand}>
+        <Select
+          value={selectedBrand?.id ?? ""}
+          onValueChange={handleBrandChange}
+        >
           <SelectTrigger
             id="brand"
             className="h-12 w-full bg-white text-base text-white"
@@ -67,8 +103,8 @@ export default function ProductInputForm({
           </SelectTrigger>
           <SelectContent>
             {brands.map((brand) => (
-              <SelectItem key={brand} value={brand}>
-                {brand}
+              <SelectItem key={brand.id} value={brand.id}>
+                {brand.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -81,12 +117,9 @@ export default function ProductInputForm({
           Model
         </Label>
         <Select
-          value={selectedDevice?.id.toString() ?? ""}
-          onValueChange={(value) => {
-            const device = devices.find((d) => d.id.toString() === value);
-            setSelectedDevice(device ?? null);
-          }}
-          disabled={!selectedBrand}
+          value={selectedModel?.id ?? ""}
+          onValueChange={handleModelChange}
+          disabled={!selectedBrand || loadingModels}
         >
           <SelectTrigger
             id="model"
@@ -94,14 +127,18 @@ export default function ProductInputForm({
           >
             <SelectValue
               placeholder={
-                selectedBrand ? "Select model..." : "Select brand first"
+                loadingModels
+                  ? "Loading models..."
+                  : selectedBrand
+                    ? "Select model..."
+                    : "Select brand first"
               }
             />
           </SelectTrigger>
           <SelectContent>
-            {filteredDevices.map((device) => (
-              <SelectItem key={device.id} value={device.id.toString()}>
-                {device.name}
+            {models.map((model) => (
+              <SelectItem key={model.id} value={model.id}>
+                {model.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -114,9 +151,9 @@ export default function ProductInputForm({
           Storage Capacity
         </Label>
         <Select
-          value={selectedCapacity ?? ""}
-          onValueChange={setSelectedCapacity}
-          disabled={!selectedDevice}
+          value={selectedVariant?.id ?? ""}
+          onValueChange={handleVariantChange}
+          disabled={!selectedModel || loadingVariants}
         >
           <SelectTrigger
             id="storage"
@@ -124,14 +161,18 @@ export default function ProductInputForm({
           >
             <SelectValue
               placeholder={
-                selectedDevice ? "Select storage..." : "Select model first"
+                loadingVariants
+                  ? "Loading storage options..."
+                  : selectedModel
+                    ? "Select storage..."
+                    : "Select model first"
               }
             />
           </SelectTrigger>
           <SelectContent>
-            {storageOptions.map((storage) => (
-              <SelectItem key={storage} value={storage}>
-                {storage}
+            {variants.map((variant) => (
+              <SelectItem key={variant.id} value={variant.id}>
+                {variant.storageCapacity}
               </SelectItem>
             ))}
           </SelectContent>
@@ -141,10 +182,10 @@ export default function ProductInputForm({
       {/* Calculate Button */}
       <Button
         onClick={handleCalculate}
-        disabled={!isComplete}
+        disabled={!isComplete || isPending}
         className="bg-friendly hover:bg-friendly/90 mt-4 h-12 w-full text-base font-semibold text-white disabled:opacity-50"
       >
-        Calculate
+        {isPending ? "Loading..." : "Calculate"}
       </Button>
     </div>
   );

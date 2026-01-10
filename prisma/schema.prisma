@@ -1,0 +1,103 @@
+// Prisma Schema for Know Your Emission
+// Database: PostgreSQL (Neon)
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Brand - Device manufacturer (e.g., Apple, Samsung)
+// First step in user selection flow
+model Brand {
+  id      String        @id @default(cuid())
+  name    String        @unique
+  devices DeviceModel[]
+
+  @@map("brands")
+}
+
+// DeviceModel - Specific device model (e.g., iPhone 14 Pro)
+// Second step in user selection flow
+model DeviceModel {
+  id          String          @id @default(cuid())
+  brandId     String
+  brand       Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  name        String          // e.g., "iPhone 14 Pro"
+  deviceType  String          // e.g., "iPhone", "Smartphone", "Laptop"
+  releaseDate DateTime?
+  variants    DeviceVariant[]
+
+  @@unique([brandId, name])
+  @@index([brandId])
+  @@map("device_models")
+}
+
+// DeviceVariant - Specific configuration (e.g., 128GB, 256GB)
+// Third step in user selection flow
+model DeviceVariant {
+  id              String           @id @default(cuid())
+  deviceModelId   String
+  deviceModel     DeviceModel      @relation(fields: [deviceModelId], references: [id], onDelete: Cascade)
+  storageCapacity String           // e.g., "128GB", "256GB"
+  slug            String           @unique // URL-safe identifier: "iphone-14-pro-128gb"
+  emissionMetrics EmissionMetrics?
+
+  @@unique([deviceModelId, storageCapacity])
+  @@index([deviceModelId])
+  @@map("device_variants")
+}
+
+// EmissionMetrics - Environmental impact data for a specific variant
+// Contains all sustainability and carbon footprint data
+model EmissionMetrics {
+  id              String        @id @default(cuid())
+  deviceVariantId String        @unique
+  deviceVariant   DeviceVariant @relation(fields: [deviceVariantId], references: [id], onDelete: Cascade)
+
+  // Environmental Rating (derived from totalCO2)
+  // Low: < 50 kg, Medium: 50-80 kg, High: > 80 kg
+  environmentRating EnvironmentRating @default(MEDIUM)
+
+  // Carbon Footprint Data
+  totalCO2          Float  // Total lifecycle CO2 equivalent in kg
+  productionPct     Float? // Production phase percentage
+  transportationPct Float? // Transportation phase percentage
+  usePct            Float? // Use phase percentage
+  endOfLifePct      Float? // End-of-life phase percentage
+
+  // Sustainability Indicators
+  recycledMaterialsPct Float? // % of recycled or renewable content
+  cleanEnergyPct       Float? // % of clean energy in manufacturing
+
+  // Additional Metrics
+  recycledRareEarthPct Float? // % of recycled rare earth elements
+  recycledPackagingPct Float? // % of recycled content in fiber packaging
+
+  // Labour & Longevity
+  labourProtection  String? // Labour protection measures description
+  longevityMeasures String? // Durability features (e.g., IP68, Ceramic Shield)
+  harmfulMaterials  String? // Information about harmful/restricted materials
+
+  // Recycling Program
+  recyclingProgram String? // Official recycling program name (e.g., "Apple Trade In")
+
+  // Source Information
+  source    String? // Source document name
+  sourceUrl String? // URL to official report
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("emission_metrics")
+}
+
+// Enum for environmental impact rating
+enum EnvironmentRating {
+  LOW    // < 50 kg CO2e
+  MEDIUM // 50-80 kg CO2e
+  HIGH   // > 80 kg CO2e
+}

@@ -1,133 +1,147 @@
-"use client";
-
+import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, ShieldCheck, Heart, GraduationCap } from "lucide-react";
+import {
+  ArrowLeft,
+  ExternalLink,
+  ShieldCheck,
+  Heart,
+  GraduationCap,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import { PieChart, Pie, Cell, Label } from "recharts";
+import CarbonChart from "@/components/CarbonChart";
+import { getReportBySlug } from "@/app/actions/device";
+import type { EnvironmentRating } from "@/generated/prisma/client";
 
-// Mock data types
-interface CarbonBreakdown {
-  category: string;
-  value: number;
-  percentage: number;
-  fill: string;
-}
-
-interface LabourProtection {
-  safeWorkplaces: boolean;
-  dignityRespect: boolean;
-  educationalOpportunities: boolean;
-}
-
-interface DeviceReport {
-  deviceName: string;
-  storage: string;
-  environmentRating: "Low" | "Medium" | "High";
-  totalCarbonFootprint: number;
-  funFact: string;
-  recycledContent: string | null;
-  recycledContentNote: string;
-  measuresForLongevity: boolean;
-  longevityDescription: string;
-  releaseDate: string;
-  recycledRenewablePercent: string | null;
-  recycledRenewableNote: string;
-  cleanEnergyPercent: string | null;
-  labourProtection: LabourProtection;
-  officialRecyclingProgram: string;
-  recyclingProgramDescription: string;
-  officialSource: string;
-  sourceUrl: string;
-  carbonBreakdown: CarbonBreakdown[];
-}
-
-// Mock data for iPhone 14 Pro 128GB
-const mockDeviceReport: DeviceReport = {
-  deviceName: "iPhone 14 Pro",
-  storage: "128GB",
-  environmentRating: "Medium",
-  totalCarbonFootprint: 65,
-  funFact: "same as 1400 cows farting*",
-  recycledContent: null,
-  recycledContentNote: "made the earth 100 times more polluted*",
-  measuresForLongevity: true,
-  longevityDescription: "Ceramic shield, IP68 Water and Dust Resistance",
-  releaseDate: "07.09.2022",
-  recycledRenewablePercent: null,
-  recycledRenewableNote: "Excluding Packaging or In-box Accessories",
-  cleanEnergyPercent: null,
-  labourProtection: {
-    safeWorkplaces: true,
-    dignityRespect: true,
-    educationalOpportunities: true,
-  },
-  officialRecyclingProgram: "Apple Trade In",
-  recyclingProgramDescription: "Ensures Your Device a Long Life or Recycle for Free",
-  officialSource: "iPhone 14 Pro Product Environment Report",
-  sourceUrl: "https://www.apple.com/environment/pdf/products/iphone/iPhone_14_Pro_PER_Sept2022.pdf",
-  carbonBreakdown: [
-    { category: "production", value: 52.65, percentage: 81, fill: "var(--color-production)" },
-    { category: "use", value: 9.75, percentage: 15, fill: "var(--color-use)" },
-    { category: "transportation", value: 1.95, percentage: 3, fill: "var(--color-transportation)" },
-    { category: "endOfLife", value: 0.65, percentage: 1, fill: "var(--color-endOfLife)" },
-  ],
-};
-
-const chartConfig = {
-  production: {
-    label: "Production",
-    color: "var(--chart-2)",
-  },
-  use: {
-    label: "Use",
-    color: "var(--chart-3)",
-  },
-  transportation: {
-    label: "Transportation",
-    color: "var(--chart-4)",
-  },
-  endOfLife: {
-    label: "End-of-life Processing",
-    color: "var(--chart-5)",
-  },
-} satisfies ChartConfig;
-
-function getRatingColor(rating: string) {
+function getRatingColor(rating: EnvironmentRating) {
   switch (rating) {
-    case "Low":
+    case "LOW":
       return "text-friendly";
-    case "Medium":
+    case "MEDIUM":
       return "text-yellow-400";
-    case "High":
+    case "HIGH":
       return "text-destructive";
     default:
       return "text-muted-foreground";
   }
 }
 
-function getRatingLabel(rating: string) {
+function getRatingLabel(rating: EnvironmentRating) {
   switch (rating) {
-    case "Low":
+    case "LOW":
       return "Low Environment Hazard";
-    case "Medium":
+    case "MEDIUM":
       return "Medium Environment Hazard";
-    case "High":
+    case "HIGH":
       return "High Environment Hazard";
     default:
       return "Unknown";
   }
 }
 
-export default function ReportPage() {
-  const report = mockDeviceReport;
+function formatDate(date: Date | null): string {
+  if (!date) return "N/A";
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+function formatPercentage(value: number | null): string {
+  if (value === null) return "N/A";
+  return `${value}%`;
+}
+
+// Parse labour protection from string
+function parseLabourProtection(text: string | null): {
+  safeWorkplaces: boolean;
+  dignityRespect: boolean;
+  educationalOpportunities: boolean;
+} {
+  if (!text) {
+    return {
+      safeWorkplaces: false,
+      dignityRespect: false,
+      educationalOpportunities: false,
+    };
+  }
+  const lowerText = text.toLowerCase();
+  return {
+    safeWorkplaces: lowerText.includes("safe") && lowerText.includes("healthy"),
+    dignityRespect:
+      lowerText.includes("dignity") && lowerText.includes("respect"),
+    educationalOpportunities: lowerText.includes("educational"),
+  };
+}
+
+// Build carbon breakdown from metrics
+function buildCarbonBreakdown(metrics: {
+  totalCO2: number;
+  productionPct: number | null;
+  transportationPct: number | null;
+  usePct: number | null;
+  endOfLifePct: number | null;
+}) {
+  const breakdown = [];
+  const total = metrics.totalCO2;
+
+  if (metrics.productionPct !== null) {
+    breakdown.push({
+      category: "production",
+      value: Math.round(((total * metrics.productionPct) / 100) * 100) / 100,
+      percentage: metrics.productionPct,
+      fill: "var(--color-production)",
+    });
+  }
+
+  if (metrics.usePct !== null) {
+    breakdown.push({
+      category: "use",
+      value: Math.round(((total * metrics.usePct) / 100) * 100) / 100,
+      percentage: metrics.usePct,
+      fill: "var(--color-use)",
+    });
+  }
+
+  if (metrics.transportationPct !== null) {
+    breakdown.push({
+      category: "transportation",
+      value: Math.round(((total * metrics.transportationPct) / 100) * 100) / 100,
+      percentage: metrics.transportationPct,
+      fill: "var(--color-transportation)",
+    });
+  }
+
+  if (metrics.endOfLifePct !== null) {
+    breakdown.push({
+      category: "endOfLife",
+      value: Math.round(((total * metrics.endOfLifePct) / 100) * 100) / 100,
+      percentage: metrics.endOfLifePct,
+      fill: "var(--color-endOfLife)",
+    });
+  }
+
+  return breakdown;
+}
+
+interface ReportPageProps {
+  params: Promise<{ slug: string }>;
+}
+
+export default async function ReportPage({ params }: ReportPageProps) {
+  const { slug } = await params;
+  const report = await getReportBySlug(slug);
+
+  if (!report) {
+    notFound();
+  }
+
+  const { variant, deviceModel, metrics } = report;
+  const carbonBreakdown = buildCarbonBreakdown(metrics);
+  const labourProtection = parseLabourProtection(metrics.labourProtection);
+  const hasLongevityMeasures = !!metrics.longevityMeasures;
 
   return (
     <main className="container mx-auto max-w-4xl py-8 px-4">
@@ -135,39 +149,53 @@ export default function ReportPage() {
       <Card className="bg-gradient-to-br from-zinc-900 to-zinc-800 border-zinc-700 mb-12">
         <CardContent className="p-6 md:p-8">
           <h1 className="text-2xl md:text-3xl font-bold mb-6">
-            {report.deviceName} ({report.storage})
+            {deviceModel.name} ({variant.storageCapacity})
           </h1>
 
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-muted-foreground">Environment impact rating:</p>
-              <p className={`text-xl md:text-2xl font-bold ${getRatingColor(report.environmentRating)}`}>
-                {getRatingLabel(report.environmentRating)}
+              <p className="text-sm text-muted-foreground">
+                Environment impact rating:
+              </p>
+              <p
+                className={`text-xl md:text-2xl font-bold ${getRatingColor(metrics.environmentRating)}`}
+              >
+                {getRatingLabel(metrics.environmentRating)}
               </p>
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground">Total carbon footprint:</p>
+              <p className="text-sm text-muted-foreground">
+                Total carbon footprint:
+              </p>
               <p className="text-2xl md:text-3xl font-bold text-friendly">
-                {report.totalCarbonFootprint} kg CO2e
+                {metrics.totalCO2} kg CO2e
               </p>
-              <p className="text-sm text-muted-foreground">({report.funFact})</p>
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground">Percent of recycled content:</p>
+              <p className="text-sm text-muted-foreground">
+                Percent of recycled content:
+              </p>
               <p className="text-xl font-semibold">
-                {report.recycledContent ?? "N/A"}
+                {formatPercentage(metrics.recycledMaterialsPct)}
               </p>
-              <p className="text-sm text-muted-foreground">{report.recycledContentNote}</p>
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground">Measures for longevity:</p>
-              <p className={`text-xl font-semibold ${report.measuresForLongevity ? "text-friendly" : ""}`}>
-                {report.measuresForLongevity ? "Yes" : "No"}
+              <p className="text-sm text-muted-foreground">
+                Measures for longevity:
               </p>
-              <p className="text-sm text-muted-foreground">{report.longevityDescription}</p>
+              <p
+                className={`text-xl font-semibold ${hasLongevityMeasures ? "text-friendly" : ""}`}
+              >
+                {hasLongevityMeasures ? "Yes" : "No"}
+              </p>
+              {metrics.longevityMeasures && (
+                <p className="text-sm text-muted-foreground">
+                  {metrics.longevityMeasures}
+                </p>
+              )}
             </div>
           </div>
 
@@ -178,96 +206,44 @@ export default function ReportPage() {
                 Go Back
               </Link>
             </Button>
-            <Button className="bg-friendly hover:bg-friendly/90 text-black gap-2" asChild>
-              <a href={report.sourceUrl} target="_blank" rel="noopener noreferrer">
-                Read a Full Analysis
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </Button>
+            {metrics.sourceUrl && (
+              <Button
+                className="bg-friendly hover:bg-friendly/90 text-black gap-2"
+                asChild
+              >
+                <a
+                  href={metrics.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Read a Full Analysis
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Overview Section */}
-      <section className="mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold mb-2">Overview</h2>
-        <div className="mb-6">
-          <p className="text-sm text-muted-foreground">Total carbon footprint</p>
-          <p className="text-sm text-muted-foreground">
-            {report.deviceName} {report.storage}
-          </p>
-        </div>
-
-        {/* Donut Chart */}
-        <div className="bg-zinc-900/50 rounded-2xl p-6 md:p-8">
-          <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[350px]">
-            <PieChart>
-              <ChartTooltip
-                cursor={false}
-                content={<ChartTooltipContent hideLabel />}
-              />
-              <Pie
-                data={report.carbonBreakdown}
-                dataKey="value"
-                nameKey="category"
-                innerRadius={80}
-                outerRadius={140}
-                strokeWidth={2}
-                stroke="var(--background)"
-              >
-                {report.carbonBreakdown.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-                <Label
-                  content={({ viewBox }) => {
-                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                      return (
-                        <text
-                          x={viewBox.cx}
-                          y={viewBox.cy}
-                          textAnchor="middle"
-                          dominantBaseline="middle"
-                        >
-                          <tspan
-                            x={viewBox.cx}
-                            y={viewBox.cy}
-                            className="fill-foreground text-3xl font-bold"
-                          >
-                            {report.totalCarbonFootprint} kg
-                          </tspan>
-                          <tspan
-                            x={viewBox.cx}
-                            y={(viewBox.cy || 0) + 24}
-                            className="fill-muted-foreground text-sm"
-                          >
-                            CO2e
-                          </tspan>
-                        </text>
-                      );
-                    }
-                  }}
-                />
-              </Pie>
-            </PieChart>
-          </ChartContainer>
-
-          {/* Legend */}
-          <div className="grid grid-cols-2 gap-4 mt-6 max-w-md mx-auto">
-            {report.carbonBreakdown.map((item) => (
-              <div key={item.category} className="flex items-center gap-2">
-                <div
-                  className="w-3 h-3 rounded-sm shrink-0"
-                  style={{ backgroundColor: chartConfig[item.category as keyof typeof chartConfig]?.color }}
-                />
-                <span className="text-sm text-muted-foreground">
-                  {chartConfig[item.category as keyof typeof chartConfig]?.label}
-                </span>
-                <span className="text-sm font-medium ml-auto">{item.percentage}%</span>
-              </div>
-            ))}
+      {carbonBreakdown.length > 0 && (
+        <section className="mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold mb-2">Overview</h2>
+          <div className="mb-6">
+            <p className="text-sm text-muted-foreground">
+              Total carbon footprint
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {deviceModel.name} {variant.storageCapacity}
+            </p>
           </div>
-        </div>
-      </section>
+
+          <CarbonChart
+            carbonBreakdown={carbonBreakdown}
+            totalCO2={metrics.totalCO2}
+          />
+        </section>
+      )}
 
       {/* Details Section */}
       <section className="space-y-6">
@@ -275,7 +251,9 @@ export default function ReportPage() {
         <div>
           <p className="text-sm text-muted-foreground mb-1">Release Date</p>
           <Separator className="mb-3" />
-          <p className="text-2xl md:text-3xl font-bold">{report.releaseDate}</p>
+          <p className="text-2xl md:text-3xl font-bold">
+            {formatDate(deviceModel.releaseDate)}
+          </p>
         </div>
 
         {/* Percent of Recycled or Renewable Contents */}
@@ -285,9 +263,8 @@ export default function ReportPage() {
           </p>
           <Separator className="mb-3" />
           <p className="text-2xl md:text-3xl font-bold">
-            {report.recycledRenewablePercent ?? "N/A"}
+            {formatPercentage(metrics.recycledMaterialsPct)}
           </p>
-          <p className="text-sm text-muted-foreground">{report.recycledRenewableNote}</p>
         </div>
 
         {/* Percent of Clean Energy in Manufacturing */}
@@ -297,7 +274,7 @@ export default function ReportPage() {
           </p>
           <Separator className="mb-3" />
           <p className="text-2xl md:text-3xl font-bold">
-            {report.cleanEnergyPercent ?? "N/A"}
+            {formatPercentage(metrics.cleanEnergyPct)}
           </p>
         </div>
 
@@ -308,19 +285,37 @@ export default function ReportPage() {
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <ShieldCheck className="h-5 w-5 text-muted-foreground" />
-              <span className={report.labourProtection.safeWorkplaces ? "" : "text-muted-foreground line-through"}>
+              <span
+                className={
+                  labourProtection.safeWorkplaces
+                    ? ""
+                    : "text-muted-foreground line-through"
+                }
+              >
                 Safe and Healthy Workplaces
               </span>
             </div>
             <div className="flex items-center gap-3">
               <Heart className="h-5 w-5 text-muted-foreground" />
-              <span className={report.labourProtection.dignityRespect ? "" : "text-muted-foreground line-through"}>
+              <span
+                className={
+                  labourProtection.dignityRespect
+                    ? ""
+                    : "text-muted-foreground line-through"
+                }
+              >
                 People are Treated with Dignity and Respect
               </span>
             </div>
             <div className="flex items-center gap-3">
               <GraduationCap className="h-5 w-5 text-muted-foreground" />
-              <span className={report.labourProtection.educationalOpportunities ? "" : "text-muted-foreground line-through"}>
+              <span
+                className={
+                  labourProtection.educationalOpportunities
+                    ? ""
+                    : "text-muted-foreground line-through"
+                }
+              >
                 Educational Opportunities for Workers
               </span>
             </div>
@@ -329,35 +324,54 @@ export default function ReportPage() {
 
         {/* Measures for Longevity */}
         <div>
-          <p className="text-sm text-muted-foreground mb-1">Measures for Longevity</p>
-          <Separator className="mb-3" />
-          <p className={`text-2xl md:text-3xl font-bold ${report.measuresForLongevity ? "text-friendly" : ""}`}>
-            {report.measuresForLongevity ? "Yes" : "No"}
+          <p className="text-sm text-muted-foreground mb-1">
+            Measures for Longevity
           </p>
-          <p className="text-sm text-muted-foreground">{report.longevityDescription}</p>
+          <Separator className="mb-3" />
+          <p
+            className={`text-2xl md:text-3xl font-bold ${hasLongevityMeasures ? "text-friendly" : ""}`}
+          >
+            {hasLongevityMeasures ? "Yes" : "No"}
+          </p>
+          {metrics.longevityMeasures && (
+            <p className="text-sm text-muted-foreground">
+              {metrics.longevityMeasures}
+            </p>
+          )}
         </div>
 
         {/* Official Recycling Programs */}
-        <div>
-          <p className="text-sm text-muted-foreground mb-1">Official Recycling Programs</p>
-          <Separator className="mb-3" />
-          <p className="text-2xl md:text-3xl font-bold">{report.officialRecyclingProgram}</p>
-          <p className="text-sm text-muted-foreground">{report.recyclingProgramDescription}</p>
-        </div>
+        {metrics.recyclingProgram && (
+          <div>
+            <p className="text-sm text-muted-foreground mb-1">
+              Official Recycling Programs
+            </p>
+            <Separator className="mb-3" />
+            <p className="text-2xl md:text-3xl font-bold">
+              {metrics.recyclingProgram}
+            </p>
+          </div>
+        )}
 
         {/* Official Source */}
-        <div>
-          <p className="text-sm text-muted-foreground mb-1">Official Source</p>
-          <Separator className="mb-3" />
-          <a
-            href={report.sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-lg md:text-xl font-medium hover:text-friendly transition-colors underline underline-offset-4"
-          >
-            {report.officialSource}
-          </a>
-        </div>
+        {metrics.source && (
+          <div>
+            <p className="text-sm text-muted-foreground mb-1">Official Source</p>
+            <Separator className="mb-3" />
+            {metrics.sourceUrl ? (
+              <a
+                href={metrics.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-lg md:text-xl font-medium hover:text-friendly transition-colors underline underline-offset-4"
+              >
+                {metrics.source}
+              </a>
+            ) : (
+              <p className="text-lg md:text-xl font-medium">{metrics.source}</p>
+            )}
+          </div>
+        )}
       </section>
     </main>
   );
