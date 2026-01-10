@@ -44,10 +44,10 @@ export default function CarbonChart({
   totalCO2,
 }: CarbonChartProps) {
   return (
-    <div className="bg-zinc-900/50 rounded-2xl p-6 md:p-8">
+    <div className="rounded-2xl bg-zinc-900/50 p-6 md:p-8">
       <ChartContainer
         config={chartConfig}
-        className="mx-auto aspect-square max-h-[350px]"
+        className="mx-auto aspect-square h-[300px] w-full max-w-[350px]"
       >
         <PieChart>
           <ChartTooltip
@@ -100,20 +100,20 @@ export default function CarbonChart({
       </ChartContainer>
 
       {/* Legend */}
-      <div className="grid grid-cols-2 gap-4 mt-6 max-w-md mx-auto">
+      <div className="mx-auto mt-6 grid max-w-md grid-cols-2 gap-4">
         {carbonBreakdown.map((item) => (
           <div key={item.category} className="flex items-center gap-2">
             <div
-              className="w-3 h-3 rounded-sm shrink-0"
+              className="h-3 w-3 shrink-0 rounded-sm"
               style={{
                 backgroundColor:
                   chartConfig[item.category as keyof typeof chartConfig]?.color,
               }}
             />
-            <span className="text-sm text-muted-foreground">
+            <span className="text-muted-foreground text-sm">
               {chartConfig[item.category as keyof typeof chartConfig]?.label}
             </span>
-            <span className="text-sm font-medium ml-auto">
+            <span className="ml-auto text-sm font-medium">
               {item.percentage}%
             </span>
           </div>

@@ -1,7 +1,11 @@
 "use client";
 
 import { createContext, useContext, useState } from "react";
-import type { Brand, DeviceModel, DeviceVariant } from "@/generated/prisma/client";
+import type {
+  Brand,
+  DeviceModel,
+  DeviceVariant,
+} from "@/generated/prisma/client";
 
 type DeviceContextType = {
   // Brand selection
@@ -22,7 +26,9 @@ const DeviceContext = createContext<DeviceContextType | undefined>(undefined);
 export function DeviceProvider({ children }: { children: React.ReactNode }) {
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [selectedModel, setSelectedModel] = useState<DeviceModel | null>(null);
-  const [selectedVariant, setSelectedVariant] = useState<DeviceVariant | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<DeviceVariant | null>(
+    null
+  );
 
   const handleSetBrand = (brand: Brand | null) => {
     setSelectedBrand(brand);
