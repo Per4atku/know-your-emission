@@ -149,7 +149,7 @@ export default function ProductInputForm({ brands }: ProductInputFormProps) {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
             >
-              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-9 w-full" />
             </motion.div>
           ) : (
             <motion.div
@@ -201,7 +201,7 @@ export default function ProductInputForm({ brands }: ProductInputFormProps) {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
             >
-              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-9 w-full" />
             </motion.div>
           ) : (
             <motion.div
