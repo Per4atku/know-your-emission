@@ -236,10 +236,7 @@ export default function ReportContent({
       </motion.div>
 
       {/* Overview Section */}
-      <div
-        ref={overviewRef}
-        className="mb-12 scroll-mt-8"
-      >
+      <div ref={overviewRef} className="mb-12 scroll-mt-8">
         <h2 className="mb-2 text-3xl font-bold md:text-4xl">Overview</h2>
         <div className="mb-6">
           <p className="text-muted-foreground text-sm">
@@ -355,18 +352,8 @@ export default function ReportContent({
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Heart
-                    className={`size-5 ${labourProtection.dignityRespect ? "text-friendly" : "text-muted-foreground"}`}
-                  />
-                  <span
-                    className={
-                      labourProtection.dignityRespect
-                        ? ""
-                        : "text-muted-foreground line-through"
-                    }
-                  >
-                    People are Treated with Dignity and Respect
-                  </span>
+                  <Heart className={`text-friendly size-5`} />
+                  <span>People are Treated with Dignity and Respect</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <GraduationCap
