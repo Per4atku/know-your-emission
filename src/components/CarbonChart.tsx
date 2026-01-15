@@ -52,7 +52,25 @@ export default function CarbonChart({
         <PieChart>
           <ChartTooltip
             cursor={false}
-            content={<ChartTooltipContent hideLabel />}
+            content={
+              <ChartTooltipContent
+                hideLabel
+                formatter={(value, name, item) => (
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+                      style={{ backgroundColor: item.payload.fill }}
+                    />
+                    <span>
+                      {chartConfig[item.payload.category as keyof typeof chartConfig]?.label}
+                    </span>
+                    <span className="ml-auto font-mono font-medium">
+                      {item.payload.percentage}%
+                    </span>
+                  </div>
+                )}
+              />
+            }
           />
           <Pie
             data={carbonBreakdown}
